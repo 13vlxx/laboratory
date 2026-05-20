@@ -11,10 +11,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - n8n.labo.vlxx.fr
+        - n8n.lab.vlxx.fr
       secretName: n8n-tls
   rules:
-    - host: n8n.labo.vlxx.fr
+    - host: n8n.lab.vlxx.fr
       http:
         paths:
           - path: /

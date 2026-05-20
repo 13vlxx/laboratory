@@ -34,9 +34,9 @@ spec:
             - name: GENERIC_TIMEZONE
               value: "Europe/Paris"
             - name: N8N_EDITOR_BASE_URL
-              value: "https://n8n.labo.vlxx.fr"
+              value: "https://n8n.lab.vlxx.fr"
             - name: WEBHOOK_URL
-              value: "https://n8n.labo.vlxx.fr"
+              value: "https://n8n.lab.vlxx.fr"
           volumeMounts:
             - name: n8n-data
               mountPath: /home/node/.n8n
