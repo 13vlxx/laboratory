@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: headlamp
+  namespace: monitoring
+spec:
+  selector:
+    app: headlamp
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 4466
+  type: ClusterIP
