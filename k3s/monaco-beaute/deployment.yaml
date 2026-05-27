@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: monaco-beaute
+  namespace: alex-monaco-beaute
+  labels:
+    app: monaco-beaute
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: monaco-beaute
+  template:
+    metadata:
+      labels:
+        app: monaco-beaute
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: monaco-beaute
+          image: ghcr.io/13vlxx/monaco-beaute:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 5173
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"

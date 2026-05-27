@@ -11,4 +11,9 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: alex-monaco-beaute
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: cert-manager
