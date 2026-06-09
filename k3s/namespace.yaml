@@ -16,4 +16,9 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: alex-portfolio
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: cert-manager
