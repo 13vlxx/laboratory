@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: minecraft
+  namespace: minecraft
+spec:
+  # LoadBalancer => exposé via ServiceLB (klipper-lb) de k3s sur le port 25565
+  # du/des nœud(s). Les joueurs se connectent sur <IP-du-noeud>:25565.
+  type: LoadBalancer
+  selector:
+    app: minecraft
+  ports:
+    - name: minecraft
+      port: 25565
+      targetPort: 25565
+      protocol: TCP

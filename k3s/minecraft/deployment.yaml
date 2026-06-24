@@ -1,0 +1,74 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minecraft
+  namespace: minecraft
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minecraft
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: minecraft
+    spec:
+      restartPolicy: Always
+      containers:
+        - name: minecraft
+          image: itzg/minecraft-server:latest
+          env:
+            # Accepte l'EULA Mojang (obligatoire pour démarrer le serveur)
+            - name: EULA
+              value: "TRUE"
+            - name: TYPE
+              value: "FABRIC"
+            - name: VERSION
+              value: "26.1.2"
+            - name: MEMORY
+              value: "4G"
+            # Garde un pipe stdin ouvert pour envoyer des commandes via la console
+            - name: CREATE_CONSOLE_IN_PIPE
+              value: "true"
+            # Nom du dossier du monde actif dans /data. Change cette valeur
+            # pour basculer sur un autre monde (l'ancien est conservé).
+            - name: LEVEL
+              value: "survival"
+            # Mode de jeu : survival | creative | adventure | spectator
+            - name: MODE
+              value: "survival"
+            - name: TZ
+              value: "Europe/Paris"
+          resources:
+            limits:
+              # Pas de limite CPU => le serveur peut utiliser tout le CPU dispo du nœud
+              memory: "4Gi"
+            requests:
+              cpu: "500m"
+              memory: "4Gi"
+          ports:
+            - containerPort: 25565
+              name: minecraft
+          volumeMounts:
+            - name: minecraft-data
+              mountPath: /data
+          readinessProbe:
+            exec:
+              command: ["mc-health"]
+            initialDelaySeconds: 30
+            periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 20
+          livenessProbe:
+            exec:
+              command: ["mc-health"]
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+            failureThreshold: 5
+      volumes:
+        - name: minecraft-data
+          persistentVolumeClaim:
+            claimName: minecraft-pvc
