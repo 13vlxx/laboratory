@@ -35,25 +35,77 @@ Suivre le démarrage (attendre `Done (X.XXs)!`) :
 kubectl -n minecraft logs -f deploy/minecraft
 ```
 
+## Quels mods côté serveur ?
+
+On ne pousse sur le serveur **que** les mods server-side. Règle simple :
+
+| Type de mod | Côté | Sur le serveur ? |
+|---|---|---|
+| Visuel / UI / contrôles (Sodium, Iris, Xaero, Jade, zoom, textures…) | **client** | ❌ non |
+| Contenu / worldgen / gameplay (Terralith, YUNG's, Farmer's Delight, mobs…) | **both** | ✅ oui (même version que le client) |
+| Optimisation serveur (Lithium, FerriteCore) | both | ✅ oui |
+| Librairies/dépendances (Fabric API, Kotlin, Cloth Config, Resourceful Lib…) | both | ✅ oui |
+
+Vérifie le badge **Client / Server / Both** sur la page Modrinth du mod en cas de doute.
+Un mod « both » oublié côté serveur (ou en version différente) ⇒ kick **mod mismatch** à la connexion.
+
 ## Ajouter des mods
 
 > ⚠️ Les mods doivent correspondre à la version Fabric/Minecraft du serveur (`VERSION` dans le deployment).
-> Pense à ne mettre côté serveur **que** les mods server-side (les mods purement client comme
-> `xaerominimap` ou `jei` n'ont rien à faire ici).
 
-### Méthode recommandée — `kubectl cp` (depuis ta machine, sans SSH)
+### Méthode recommandée — staging + `kubectl cp` (depuis ta machine, sans SSH)
 
-Le `/.` à la fin copie le **contenu** du dossier et évite le piège `mods/mods/` :
+On copie d'abord la sélection des mods serveur dans un dossier temporaire, puis on l'envoie. Le `/.`
+final copie le **contenu** du dossier et évite le piège `mods/mods/`.
 
 ```bash
+SRC="/Users/alex/Library/Application Support/PrismLauncher/instances/26.1.2/minecraft/mods"
+STAGE="/tmp/mc-server-mods"
+rm -rf "$STAGE" && mkdir -p "$STAGE"
+
+# Mods nécessaires côté serveur : contenu + worldgen + libs + optim server-safe
+for f in \
+  "FarmersDelight-*.jar" \
+  "Terralith_*.jar" \
+  "YungsBetterCaves-*.jar" \
+  "YungsBetterMineshafts-*.jar" \
+  "friendsandfoes-*.jar" \
+  "MutantMonsters-*.jar" \
+  "collective-*.jar" \
+  "treeharvester-*.jar" \
+  "fabric-api-*.jar" \
+  "fabric-language-kotlin-*.jar" \
+  "YungsApi-*.jar" \
+  "lithostitched-*.jar" \
+  "ResourcefulLib-*.jar" \
+  "ForgeConfigAPIPort-*.jar" \
+  "PuzzlesLib-*.jar" \
+  "ConfigManager-*.jar" \
+  "cloth-config-*.jar" \
+  "lithium-fabric-*.jar" \
+  "ferritecore-*.jar" \
+  "debugify-*.jar" \
+  "NoChatReports-*.jar" ; do
+  # ${~f} force zsh à développer le * (sinon le motif reste littéral en zsh)
+  cp "$SRC"/${~f} "$STAGE"/ 2>/dev/null && echo "ok        $f" || echo "MANQUANT  $f"
+done
+
+echo "--- contenu du staging ---"
+ls -1 "$STAGE"
+
 POD=$(kubectl -n minecraft get pod -l app=minecraft -o jsonpath='{.items[0].metadata.name}')
 
-cd "/Users/alex/Library/Application Support/PrismLauncher/instances/Perso/minecraft"
+# (optionnel) repartir d'un dossier mods propre côté serveur
+kubectl -n minecraft exec "$POD" -- sh -c 'rm -f /data/mods/*.jar'
 
-kubectl -n minecraft cp ./mods/. "$POD":/data/mods
+# Copie le CONTENU du dossier de staging (le /. évite mods/mods/)
+kubectl -n minecraft cp "$STAGE"/. "$POD":/data/mods
 
 kubectl -n minecraft rollout restart deployment/minecraft
+kubectl -n minecraft logs -f deploy/minecraft | grep -i "Loading.*mods"
 ```
+
+> 💡 Côté client (instance Prism), tu gardes **tous** les mods, y compris les « both » du serveur.
 
 ### Méthode alternative — scp vers le nœud distant
 
@@ -65,7 +117,7 @@ appartiennent à root, donc on passe par `/tmp` puis `sudo mv`.
 BASE=$(kubectl get pv $(kubectl -n minecraft get pvc minecraft-pvc -o jsonpath='{.spec.volumeName}') -o jsonpath='{.spec.local.path}')
 
 # 2. Envoie les .jar dans /tmp du nœud (remplace user@noeud)
-cd "/Users/alex/Library/Application Support/PrismLauncher/instances/Perso/minecraft"
+cd "/Users/alex/Library/Application Support/PrismLauncher/instances/26.1.2/minecraft"
 scp ./mods/*.jar user@noeud:/tmp/
 
 # 3. Sur le nœud : déplace dans mods/ avec sudo
@@ -109,6 +161,30 @@ kubectl -n minecraft rollout restart deployment/minecraft
 | `MEMORY` | Heap JVM (ex. `4G`) |
 | `LEVEL` | Nom du dossier du monde actif dans `/data` — change-le pour basculer de monde |
 | `MODE` | `survival` \| `creative` \| `adventure` \| `spectator` (uniquement à la création du monde) |
+| `MOTD` | Texte affiché sous le serveur dans la liste multijoueur |
+| `OPS` | Pseudos admins (droits de commande), séparés par des virgules |
+| `ENABLE_WHITELIST` | `true` pour restreindre l'accès à la whitelist |
+| `ENFORCE_WHITELIST` | `true` pour kick immédiatement les non-autorisés |
+| `WHITELIST` | Pseudos autorisés, séparés par des virgules. Les `/whitelist add` en jeu sont conservés (merge par défaut) |
+| `SEED` | Seed du monde (uniquement à la création) |
+
+## Gérer les mondes
+
+`LEVEL` désigne le monde chargé. Supprimer le dossier d'un monde puis redémarrer le régénère.
+
+```bash
+POD=$(kubectl -n minecraft get pod -l app=minecraft -o jsonpath='{.items[0].metadata.name}')
+
+# Sauvegarde avant suppression si le monde a de la valeur
+kubectl -n minecraft cp "$POD":/data/survival ./backup-survival
+
+# Repartir à neuf sur le monde actif (LEVEL=survival)
+kubectl -n minecraft exec "$POD" -- rm -rf /data/survival
+kubectl -n minecraft rollout restart deployment/minecraft
+
+# Supprimer un monde inutilisé (non chargé) — pas besoin de régénérer
+kubectl -n minecraft exec "$POD" -- rm -rf /data/world
+```
 
 ## Connexion
 

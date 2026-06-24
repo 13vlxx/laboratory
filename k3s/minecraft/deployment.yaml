@@ -25,6 +25,8 @@ spec:
               value: "TRUE"
             - name: TYPE
               value: "FABRIC"
+            - name: ICON
+              value: "https://avatars.githubusercontent.com/u/118368532?v=4"
             - name: VERSION
               value: "26.1.2"
             - name: MEMORY
@@ -39,8 +41,25 @@ spec:
             # Mode de jeu : survival | creative | adventure | spectator
             - name: MODE
               value: "survival"
+            # Difficulté du jeu : peaceful | easy | normal | hard
+            - name: DIFFICULTY
+              value: "normal"
+            # Admins (droits de commande), pseudos séparés par des virgules
+            - name: OPS
+              value: "Trvnks137"
+            # Whitelist : seuls les pseudos listés peuvent se connecter
+            - name: ENABLE_WHITELIST
+              value: "true"
+            # Virer automatiquement les pseudos pas autorisés
+            - name: ENFORCE_WHITELIST
+              value: "true"
+            # Liste des pseudos autorisés à se connecter
+            - name: WHITELIST
+              value: "Trvnks137"
             - name: TZ
               value: "Europe/Paris"
+            - name: MOTD
+              value: "Le serveur de Alec mal alpha !"
           resources:
             limits:
               # Pas de limite CPU => le serveur peut utiliser tout le CPU dispo du nœud
