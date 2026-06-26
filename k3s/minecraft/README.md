@@ -49,63 +49,52 @@ On ne pousse sur le serveur **que** les mods server-side. Règle simple :
 Vérifie le badge **Client / Server / Both** sur la page Modrinth du mod en cas de doute.
 Un mod « both » oublié côté serveur (ou en version différente) ⇒ kick **mod mismatch** à la connexion.
 
+> ⚠️ **Cas JEI (et autres viewers de recettes).** Depuis **Minecraft 1.21.2**, les recettes sont
+> calculées **côté serveur** et ne sont plus envoyées en entier au client : seul le livre de recettes
+> vanilla fonctionne, mais JEI n'a pas les recettes de craft et n'affiche que ses catégories générées
+> client-side (combustible, enclume…). Bien que JEI soit un mod « visuel », il faut donc l'installer
+> **aussi côté serveur** (même version que le client) pour qu'il re-synchronise les recettes complètes.
+> Symptôme typique : `R` sur un item ne montre pas l'établi alors que tout marche en solo.
+
 ## Ajouter des mods
 
 > ⚠️ Les mods doivent correspondre à la version Fabric/Minecraft du serveur (`VERSION` dans le deployment).
 
-### Méthode recommandée — staging + `kubectl cp` (depuis ta machine, sans SSH)
+### Méthode recommandée — le script `sync-mods.sh`
 
-On copie d'abord la sélection des mods serveur dans un dossier temporaire, puis on l'envoie. Le `/.`
-final copie le **contenu** du dossier et évite le piège `mods/mods/`.
+[`sync-mods.sh`](./sync-mods.sh) automatise tout : il copie la sélection de mods server-side depuis
+l'instance PrismLauncher locale dans un dossier de staging, puis l'envoie dans `/data/mods` du pod
+via `kubectl cp` et redémarre le deployment.
 
 ```bash
-SRC="/Users/alex/Library/Application Support/PrismLauncher/instances/26.1.2/minecraft/mods"
-STAGE="/tmp/mc-server-mods"
-rm -rf "$STAGE" && mkdir -p "$STAGE"
+cd k3s/minecraft
 
-# Mods nécessaires côté serveur : contenu + worldgen + libs + optim server-safe
-for f in \
-  "FarmersDelight-*.jar" \
-  "Terralith_*.jar" \
-  "YungsBetterCaves-*.jar" \
-  "YungsBetterMineshafts-*.jar" \
-  "friendsandfoes-*.jar" \
-  "MutantMonsters-*.jar" \
-  "collective-*.jar" \
-  "treeharvester-*.jar" \
-  "fabric-api-*.jar" \
-  "fabric-language-kotlin-*.jar" \
-  "YungsApi-*.jar" \
-  "lithostitched-*.jar" \
-  "ResourcefulLib-*.jar" \
-  "ForgeConfigAPIPort-*.jar" \
-  "PuzzlesLib-*.jar" \
-  "ConfigManager-*.jar" \
-  "cloth-config-*.jar" \
-  "lithium-fabric-*.jar" \
-  "ferritecore-*.jar" \
-  "debugify-*.jar" \
-  "NoChatReports-*.jar" ; do
-  # ${~f} force zsh à développer le * (sinon le motif reste littéral en zsh)
-  cp "$SRC"/${~f} "$STAGE"/ 2>/dev/null && echo "ok        $f" || echo "MANQUANT  $f"
-done
+./sync-mods.sh              # staging + clean /data/mods + copie + restart
+./sync-mods.sh --dry-run    # montre ce qui serait copié, ne pousse rien
+./sync-mods.sh --no-clean   # ajoute sans vider le dossier serveur d'abord
+./sync-mods.sh --no-restart # copie sans redémarrer (utile pour batcher)
+```
 
-echo "--- contenu du staging ---"
-ls -1 "$STAGE"
+- **La liste des mods server-side vit en haut du script** (tableau `MODS`). Pour ajouter/retirer un
+  mod côté serveur, édite cette liste — un seul endroit à maintenir.
+- Chaque mod absent du dossier source est signalé `MANQUANT` (sans planter) et un avertissement final
+  s'affiche. Pratique pour repérer un mod désactivé/supprimé côté client.
+- Le chemin source par défaut pointe vers l'instance `Version 26.1.2`. Surcharge-le si besoin :
+  ```bash
+  MC_MODS_SRC="/chemin/vers/instance/.../mods" ./sync-mods.sh
+  ```
+- Le `kubectl cp` utilise un `/.` final pour copier le **contenu** du staging et éviter le piège
+  `mods/mods/`.
 
-POD=$(kubectl -n minecraft get pod -l app=minecraft -o jsonpath='{.items[0].metadata.name}')
+Suis ensuite le démarrage (attendre `Done (X.XXs)!`) :
 
-# (optionnel) repartir d'un dossier mods propre côté serveur
-kubectl -n minecraft exec "$POD" -- sh -c 'rm -f /data/mods/*.jar'
-
-# Copie le CONTENU du dossier de staging (le /. évite mods/mods/)
-kubectl -n minecraft cp "$STAGE"/. "$POD":/data/mods
-
-kubectl -n minecraft rollout restart deployment/minecraft
-kubectl -n minecraft logs -f deploy/minecraft | grep -i "Loading.*mods"
+```bash
+kubectl -n minecraft logs -f deploy/minecraft
 ```
 
 > 💡 Côté client (instance Prism), tu gardes **tous** les mods, y compris les « both » du serveur.
+> Et inversement : un mod « both » présent côté serveur (ex. `treeharvester`) doit aussi rester côté
+> client, sinon risque de **mod mismatch**.
 
 ### Méthode alternative — scp vers le nœud distant
 
@@ -117,7 +106,7 @@ appartiennent à root, donc on passe par `/tmp` puis `sudo mv`.
 BASE=$(kubectl get pv $(kubectl -n minecraft get pvc minecraft-pvc -o jsonpath='{.spec.volumeName}') -o jsonpath='{.spec.local.path}')
 
 # 2. Envoie les .jar dans /tmp du nœud (remplace user@noeud)
-cd "/Users/alex/Library/Application Support/PrismLauncher/instances/26.1.2/minecraft"
+cd "/Users/alex/Library/Application Support/PrismLauncher/instances/Version 26.1.2/minecraft"
 scp ./mods/*.jar user@noeud:/tmp/
 
 # 3. Sur le nœud : déplace dans mods/ avec sudo

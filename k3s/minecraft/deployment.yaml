@@ -46,7 +46,7 @@ spec:
               value: "normal"
             # Admins (droits de commande), pseudos séparés par des virgules
             - name: OPS
-              value: "Trvnks137"
+              value: "Trvnks137,rarabsc"
             # Whitelist : seuls les pseudos listés peuvent se connecter
             - name: ENABLE_WHITELIST
               value: "true"
