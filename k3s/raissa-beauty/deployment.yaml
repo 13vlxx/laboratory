@@ -1,0 +1,32 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: raissa-beauty
+  namespace: alex-raissa-beauty
+  labels:
+    app: raissa-beauty
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: raissa-beauty
+  template:
+    metadata:
+      labels:
+        app: raissa-beauty
+    spec:
+      imagePullSecrets:
+        - name: ghcr-secret
+      containers:
+        - name: raissa-beauty
+          image: ghcr.io/13vlxx/raissa-beauty:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "200m"

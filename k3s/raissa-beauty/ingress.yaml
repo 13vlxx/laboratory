@@ -1,0 +1,41 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: raissa-beauty
+  namespace: alex-raissa-beauty
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: "websecure"
+    traefik.ingress.kubernetes.io/router.tls: "true"
+    # Redirige www vers l'apex (cf. middleware.yaml). Format du nom :
+    # <namespace>-<nom-de-la-middleware>@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: "alex-raissa-beauty-redirect-www-to-apex@kubernetescrd"
+spec:
+  ingressClassName: traefik
+  tls:
+    # Un seul certificat couvrant les deux domaines (SAN).
+    - hosts:
+        - raissabeauty.fr
+        - www.raissabeauty.fr
+      secretName: raissa-beauty-tls
+  rules:
+    - host: raissabeauty.fr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: raissa-beauty
+                port:
+                  number: 80
+    - host: www.raissabeauty.fr
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: raissa-beauty
+                port:
+                  number: 80

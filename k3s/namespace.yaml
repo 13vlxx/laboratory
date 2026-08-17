@@ -21,4 +21,9 @@ metadata:
 apiVersion: v1
 kind: Namespace
 metadata:
+  name: alex-raissa-beauty
+---
+apiVersion: v1
+kind: Namespace
+metadata:
   name: cert-manager

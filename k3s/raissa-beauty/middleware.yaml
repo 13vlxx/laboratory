@@ -1,0 +1,12 @@
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: redirect-www-to-apex
+  namespace: alex-raissa-beauty
+spec:
+  redirectRegex:
+    # Ne matche que le host www : le routeur de l'apex traverse la middleware
+    # sans être modifié, même si elle est attachée aux deux.
+    regex: "^https?://www\\.raissabeauty\\.fr/(.*)"
+    replacement: "https://raissabeauty.fr/${1}"
+    permanent: true # 301 (et non 302) : le changement est définitif pour les moteurs
