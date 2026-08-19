@@ -11,10 +11,10 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
-        - portfolio.lab.vlxx.fr
+        - arekkusu.dev
       secretName: portfolio-tls
   rules:
-    - host: portfolio.lab.vlxx.fr
+    - host: arekkusu.dev
       http:
         paths:
           - path: /

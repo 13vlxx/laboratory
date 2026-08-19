@@ -89,9 +89,9 @@ spec:
             - name: GENERIC_TIMEZONE
               value: "Europe/Paris"         # timezone pour les crons et logs
             - name: N8N_EDITOR_BASE_URL
-              value: "https://n8n.labo.vlxx.fr"  # URL publique de l'interface n8n
+              value: "https://n8n.labo.arekkusu.dev"  # URL publique de l'interface n8n
             - name: WEBHOOK_URL
-              value: "https://n8n.labo.vlxx.fr"  # URL de base pour les webhooks n8n
+              value: "https://n8n.labo.arekkusu.dev"  # URL de base pour les webhooks n8n
                                                   # sans ça, n8n génère des URLs incorrectes
 
           volumeMounts:
@@ -205,11 +205,11 @@ spec:
 
   tls:
     - hosts:
-        - n8n.labo.vlxx.fr   # domaine pour lequel le certificat TLS est généré
+        - n8n.labo.arekkusu.dev   # domaine pour lequel le certificat TLS est généré
       secretName: n8n-tls    # nom du Secret Kubernetes où cert-manager stocke le certificat
 
   rules:
-    - host: n8n.labo.vlxx.fr  # domaine entrant
+    - host: n8n.labo.arekkusu.dev  # domaine entrant
       http:
         paths:
           - path: /           # préfixe de l'URL (/ = tout le trafic)
@@ -248,7 +248,7 @@ spec:
     # → URL de l'API ACME de Let's Encrypt (production)
     # → pour les tests, utiliser : https://acme-staging-v02.api.letsencrypt.org/directory
 
-    email: alex@vlxx.fr
+    email: alex@arekkusu.dev
     # → email pour les notifications d'expiration de Let's Encrypt
 
     privateKeySecretRef:
